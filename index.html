@@ -176,6 +176,35 @@
   .confetti{position:fixed;top:-20px;width:12px;height:18px;z-index:60;pointer-events:none;animation:fall linear forwards}
   @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
 
+  /* İsim ekranı & skor tablosu */
+  .namecard{max-width:520px;margin:0 auto}
+  .namecard h2{margin:6px 0}
+  .namecard p{color:var(--muted);font-size:18px}
+  .namecard input{width:100%;font-size:22px;padding:14px 16px;border-radius:14px;border:3px solid #c7d2fe;outline:none;font-family:inherit;text-align:center;margin-top:6px}
+  .namecard input:focus{border-color:var(--ebob)}
+  .err{color:var(--bad);font-weight:700;min-height:22px;margin-top:8px}
+  .userbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .userbar .who{color:#fff;font-size:18px}
+  .linkbtn{background:none;color:var(--ebob);text-decoration:underline;font-size:15px;padding:4px 6px;font-weight:700}
+  .linkbtn.light{color:rgba(255,255,255,.85)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+  .tab{background:rgba(255,255,255,.2);color:#fff;padding:9px 14px;border-radius:999px;font-weight:700;font-size:15px}
+  .tab.on{background:#fff;color:var(--ink)}
+  .lb{width:100%;border-collapse:collapse;font-size:18px;text-align:left}
+  .lb th{color:var(--muted);font-size:14px;font-weight:700;padding:8px 10px;border-bottom:2px solid #e2e8f0}
+  .lb td{padding:10px;border-bottom:1px solid #f1f5f9}
+  .lb .rk{width:60px;text-align:center;font-size:22px;font-weight:800}
+  .lb .pt{font-weight:900;text-align:right;color:var(--ebob)}
+  .lb th:last-child{text-align:right}
+  .lb tr.me td{background:#fef3c7}
+  .lb tr.gap td{text-align:center;color:var(--muted)}
+  .you{background:var(--gold);color:#fff;font-size:12px;padding:2px 8px;border-radius:999px;vertical-align:middle}
+  .lbbox{text-align:left;background:#f8fafc;border-radius:18px;padding:14px 16px;margin:10px 0 6px}
+  .lbbox h3{margin:0 0 4px}
+  .rankline{margin:0 0 8px;color:var(--muted)}
+  .lbfoot{text-align:center;color:rgba(255,255,255,.85);margin-top:14px;font-size:14px}
+  .lbfoot .linkbtn{color:#fff}
+
   .howto{text-align:left;font-size:19px;line-height:1.6}
   .howto li{margin-bottom:6px}
   .sound{position:fixed;right:14px;bottom:14px;background:#fff;border-radius:50%;width:48px;height:48px;font-size:22px;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:40}
@@ -236,8 +265,69 @@ const sWin  = () => [523,659,784,1047].forEach((f,i) => beep(f,.25,'sine',.15,i*
 $('#soundBtn').onclick = () => { soundOn = !soundOn; $('#soundBtn').textContent = soundOn ? '🔊' : '🔇'; };
 
 /* ---- en iyi skorlar ---- */
-function getBest(id){ try{ return +localStorage.getItem('ck_best_'+id) || 0; }catch(e){ return 0; } }
-function setBest(id,v){ try{ localStorage.setItem('ck_best_'+id, v); }catch(e){} }
+/* ---- öğrenci adı ve skor tablosu (bu cihazın tarayıcısında saklanır) ---- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const normName = s => s.trim().replace(/\s+/g, ' ');
+let player = store.get('ck_player', null);
+let memScores = null; // localStorage kapalıysa bellekte tut
+
+// Demo kişiler — puan sırası: Hızlı Hesap, Problem Avcısı, Bölen Merdiveni, Hızlı Karar, Balon Patlat, Asal Dedektif
+const DEMO = [
+  ['Zeynep Demir', [245,120,160,290,270,100]],
+  ['Ayşe Yılmaz',  [215,115,150,260,240, 90]],
+  ['Elif Şahin',   [195,105,140,235,215, 90]],
+  ['Mehmet Kaya',  [180, 95,132,210,190, 80]],
+  ['Defne Koç',    [170,100,126,200,205, 80]],
+  ['Emir Çelik',   [150, 85,118,175,160, 70]],
+  ['Yusuf Arslan', [120, 70, 96,150,130, 60]],
+  ['Ali Öztürk',   [ 95, 55, 84,120,110, 50]],
+];
+function loadScores(){
+  if (memScores) return memScores;
+  let s = store.get('ck_scores', null);
+  if (!s){
+    const ids = ['a1','a2','a3','b1','b2','b3'];
+    s = DEMO.flatMap(([name, sc]) => sc.map((v,i) => ({ name, id:ids[i], score:v, t:0, demo:true })));
+    store.set('ck_scores', s);
+  }
+  return memScores = s;
+}
+function saveScores(s){ memScores = s; store.set('ck_scores', s); }
+function addResult(id, score){ const s = loadScores(); s.push({ name:player, id, score, t:Date.now() }); saveScores(s); }
+function board(id){ // her kişinin o etkinlikteki en iyi skoru
+  const best = new Map();
+  loadScores().filter(r => r.id === id).forEach(r => { const b = best.get(r.name); if (!b || r.score > b.score) best.set(r.name, r); });
+  return [...best.values()].sort((a,b) => b.score - a.score);
+}
+function overallBoard(){ // her etkinlikteki en iyi skorların toplamı
+  const m = new Map();
+  Object.keys(GAMES).forEach(id => board(id).forEach(r => {
+    const o = m.get(r.name) || { name:r.name, score:0, n:0 };
+    o.score += r.score; o.n++; m.set(r.name, o);
+  }));
+  return [...m.values()].sort((a,b) => b.score - a.score);
+}
+function getBest(id){ const r = board(id).find(r => r.name === player); return r ? r.score : 0; }
+const medal = i => ['🥇','🥈','🥉'][i] || (i + 1);
+function boardTable(rows, limit, extraCol){
+  const pi = rows.findIndex(r => r.name === player);
+  const show = rows.slice(0, limit).map((r,i) => [r,i]);
+  if (pi >= limit) show.push(null, [rows[pi], pi]);
+  if (!rows.length) return `<p class="hint">Henüz skor yok.</p>`;
+  return `<table class="lb"><thead><tr><th>Sıra</th><th>Ad Soyad</th>${extraCol ? `<th>${extraCol.h}</th>` : ''}<th>Puan</th></tr></thead><tbody>
+    ${show.map(x => x === null ? `<tr class="gap"><td colspan="${extraCol ? 4 : 3}">⋯</td></tr>` : `
+      <tr class="${x[0].name === player ? 'me' : ''}">
+        <td class="rk">${medal(x[1])}</td>
+        <td>${esc(x[0].name)}${x[0].name === player ? ' <span class="you">sen</span>' : ''}</td>
+        ${extraCol ? `<td>${extraCol.f(x[0])}</td>` : ''}
+        <td class="pt">${x[0].score}</td>
+      </tr>`).join('')}
+  </tbody></table>`;
+}
 
 /* ---- ortak ekran parçaları ---- */
 let G = {};
@@ -362,9 +452,66 @@ const GAMES = {
         how:['<b>10 soru</b> sorulur.','Her doğru cevap 10 puan.','Bir kez <b>%50 jokeri</b> kullanabilirsin: iki yanlış seçenek silinir.','Her sorudan sonra açıklamayı oku!'], start:()=>startB3() },
 };
 
-function home(){
+function nameScreen(){
   stopAll();
   app.innerHTML = `
+    <div class="hero">
+      <div class="badge">8. Sınıf Matematik · 1. Ünite</div>
+      <h1>Çarpanlar ve Katlar<br>Pekiştirme Etkinlikleri</h1>
+    </div>
+    <div class="card namecard">
+      <div style="font-size:60px">👋</div>
+      <h2>Hoş geldin!</h2>
+      <p>Skorunun skor tablosunda görünmesi için adını ve soyadını yaz.</p>
+      <input id="nameIn" maxlength="30" autocomplete="off" placeholder="Örn: Ayşe Yılmaz" value="${player ? esc(player) : ''}">
+      <div class="err" id="nameErr"></div>
+      <button class="btn" id="nameBtn">Devam Et →</button>
+    </div>`;
+  const inp = $('#nameIn');
+  const go = () => {
+    const n = normName(inp.value);
+    if (n.length < 2){ $('#nameErr').textContent = 'Lütfen adını ve soyadını yaz.'; inp.focus(); return; }
+    player = n; store.set('ck_player', n); home();
+  };
+  $('#nameBtn').onclick = go;
+  inp.onkeydown = e => { if (e.key === 'Enter') go(); };
+  inp.focus();
+}
+
+function leaderboard(tab='all', back=home){
+  stopAll();
+  const tabs = [['all','🏆 Genel'], ...Object.entries(GAMES).map(([id,g]) => [id, g.icon + ' ' + g.name])];
+  const rows = tab === 'all' ? overallBoard() : board(tab);
+  const hasDemo = loadScores().some(r => r.demo);
+  app.innerHTML = `
+    <div class="topbar"><button class="btn-ghost" id="backBtn">← Geri</button></div>
+    <h1 class="page-title">🏆 Skor Tablosu</h1>
+    <div class="tabs">${tabs.map(([k,l]) => `<button class="tab ${k===tab?'on':''}" data-k="${k}">${l}</button>`).join('')}</div>
+    <div class="card">
+      <p class="hint" style="margin-top:0">${tab === 'all' ? 'Genel sıralama: her etkinlikteki en iyi puanların toplamı.' : 'Her öğrencinin bu etkinlikteki en iyi puanı.'}</p>
+      ${boardTable(rows, 50, tab === 'all' ? { h:'Etkinlik', f:r => r.n + '/6' } : null)}
+    </div>
+    <div class="lbfoot">
+      Skorlar bu cihazın tarayıcısında saklanır.
+      ${hasDemo ? '<button class="linkbtn" id="clearDemo">Demo kişileri kaldır</button>' : ''}
+    </div>`;
+  $('#backBtn').onclick = back;
+  app.querySelectorAll('.tab').forEach(b => b.onclick = () => leaderboard(b.dataset.k, back));
+  if ($('#clearDemo')) $('#clearDemo').onclick = () => {
+    if (!confirm('8 demo kişi skor tablosundan kaldırılsın mı?')) return;
+    saveScores(loadScores().filter(r => !r.demo));
+    leaderboard(tab, back);
+  };
+}
+
+function home(){
+  stopAll();
+  if (!player) return nameScreen();
+  app.innerHTML = `
+    <div class="userbar">
+      <span class="who">👤 <b>${esc(player)}</b> <button class="linkbtn light" id="chName">değiştir</button></span>
+      <button class="btn-ghost" id="lbBtn">🏆 Skor Tablosu</button>
+    </div>
     <div class="hero">
       <div class="badge">8. Sınıf Matematik · 1. Ünite</div>
       <h1>Çarpanlar ve Katlar<br>Pekiştirme Etkinlikleri</h1>
@@ -380,6 +527,8 @@ function home(){
         </button>`).join('')}
     </div>`;
   app.querySelectorAll('.topic').forEach(b => b.onclick = () => topicMenu(b.dataset.t));
+  $('#chName').onclick = nameScreen;
+  $('#lbBtn').onclick = () => leaderboard('all', home);
 }
 
 function topicMenu(tk){
@@ -424,7 +573,8 @@ function finish(id){
   const acc = G.total ? G.correct / G.total : 0;
   const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : acc >= .4 ? 1 : 0;
   const best = getBest(id), isNew = G.score > best;
-  if (isNew) setBest(id, G.score);
+  addResult(id, G.score);
+  const rows = board(id), rank = rows.findIndex(r => r.name === player) + 1;
   const msgs = ['Tekrar deneyelim, sen yaparsın! 💪','İyi başlangıç! Biraz daha pratik 👍','Harika iş çıkardın! 🎉','Muhteşem! Tam bir matematik ustası! 🏆'];
   app.innerHTML = `
     <div class="card result">
@@ -433,9 +583,15 @@ function finish(id){
       <div class="score">${G.score} puan</div>
       <p style="font-size:20px;margin:6px 0">Doğru: <b>${G.correct}</b> / ${G.total} &nbsp;·&nbsp; Başarı: <b>%${Math.round(acc*100)}</b></p>
       <p style="font-size:18px;color:var(--gold);font-weight:800;min-height:24px">${isNew && G.score>0 ? '🏆 Yeni rekor!' : (best ? 'En iyi skor: ' + best : '')}</p>
-      <p style="font-size:22px;font-weight:700">${msgs[stars]}</p>
+      <p style="font-size:22px;font-weight:700">${esc(player)}, ${msgs[stars].charAt(0).toLocaleLowerCase('tr') + msgs[stars].slice(1)}</p>
+      <div class="lbbox">
+        <h3>🏆 Skor Tablosu · ${g.name}</h3>
+        <p class="rankline">Sıralamadaki yerin: <b>${rank}.</b> / ${rows.length} kişi</p>
+        ${boardTable(rows, 10)}
+      </div>
       <div class="row">
         <button class="btn ${g.topic==='asal'?'orange':''}" id="againBtn">🔁 Tekrar Dene</button>
+        <button class="btn gray" id="lbBtn">🏆 Tüm Tablo</button>
         <button class="btn gray" id="menuBtn">📋 Diğer Etkinlikler</button>
         <button class="btn gray" id="homeBtn">🏠 Ana Sayfa</button>
       </div>
@@ -443,6 +599,7 @@ function finish(id){
   $('#againBtn').onclick = () => { stopAll(); g.start(); };
   $('#menuBtn').onclick = () => topicMenu(g.topic);
   $('#homeBtn').onclick = home;
+  $('#lbBtn').onclick = () => leaderboard(id, () => topicMenu(g.topic));
   if (stars >= 2){ sWin(); confetti(); }
 }
 
