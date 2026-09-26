@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Çarpanlar ve Katlar – Pekiştirme Etkinlikleri</title>
+<style>
+  :root{
+    --bg1:#4f46e5; --bg2:#9333ea;
+    --card:#ffffff; --ink:#1e1b4b; --muted:#6b7280;
+    --ebob:#4f46e5; --ekok:#0891b2; --asal:#ea580c; --asal2:#db2777;
+    --good:#16a34a; --bad:#dc2626; --gold:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    background-attachment:fixed;
+    color:var(--ink); min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer;border:none}
+  #app{max-width:1000px;margin:0 auto;padding:20px 16px 40px}
+
+  /* ---------- Ana ekran ---------- */
+  .hero{text-align:center;color:#fff;margin:20px 0 28px}
+  .hero h1{font-size:clamp(28px,5vw,48px);margin:0 0 6px;text-shadow:0 3px 0 rgba(0,0,0,.2)}
+  .hero p{font-size:clamp(15px,2.2vw,20px);margin:0;opacity:.9}
+  .hero .badge{display:inline-block;background:rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-weight:700;margin-bottom:12px}
+  .topics{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .topic{
+    background:var(--card);border-radius:24px;padding:26px;text-align:left;
+    box-shadow:0 10px 0 rgba(0,0,0,.15),0 20px 40px rgba(0,0,0,.2);
+    transition:transform .15s; position:relative; overflow:hidden;
+  }
+  .topic:hover{transform:translateY(-4px) rotate(-.5deg)}
+  .topic .ico{font-size:54px}
+  .topic h2{margin:8px 0 6px;font-size:28px}
+  .topic p{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
+  .topic .go{margin-top:16px;display:inline-block;padding:10px 18px;border-radius:12px;color:#fff;font-weight:700}
+  .topic.t-ebob .go{background:var(--ebob)} .topic.t-ebob h2{color:var(--ebob)}
+  .topic.t-asal .go{background:var(--asal)} .topic.t-asal h2{color:var(--asal)}
+  .topic::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;opacity:.12}
+  .topic.t-ebob::after{background:var(--ebob)} .topic.t-asal::after{background:var(--asal)}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
+  .btn-ghost{background:rgba(255,255,255,.2);color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;font-size:15px}
+  .btn-ghost:hover{background:rgba(255,255,255,.32)}
+  .page-title{color:#fff;text-align:center;font-size:clamp(24px,4vw,36px);margin:4px 0 16px}
+
+  .tips{background:rgba(255,255,255,.95);border-radius:18px;padding:16px 20px;margin-bottom:20px;border-left:8px solid var(--gold)}
+  .tips h3{margin:0 0 8px}
+  .tips ul{margin:0;padding-left:20px;line-height:1.6}
+  .games{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+  .gcard{background:#fff;border-radius:20px;padding:22px;text-align:left;box-shadow:0 8px 0 rgba(0,0,0,.12);transition:transform .15s;display:flex;flex-direction:column}
+  .gcard:hover{transform:translateY(-4px)}
+  .gcard .ico{font-size:46px}
+  .gcard h3{margin:6px 0;font-size:22px}
+  .gcard p{margin:0 0 12px;color:var(--muted);line-height:1.4;flex:1}
+  .gcard .best{font-size:14px;font-weight:700;color:var(--gold)}
+
+  /* ---------- Etkinlik ---------- */
+  .hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .hud .title{flex:1;color:#fff;font-weight:800;font-size:clamp(18px,3vw,26px);text-align:center}
+  .stat{background:#fff;border-radius:12px;padding:8px 14px;font-weight:800;font-size:18px;min-width:70px;text-align:center}
+  .stat.pop{animation:pop .3s}
+  @keyframes pop{50%{transform:scale(1.25)}}
+  .card{background:#fff;border-radius:24px;padding:clamp(18px,4vw,34px);box-shadow:0 10px 0 rgba(0,0,0,.14);text-align:center}
+  .tag{display:inline-block;padding:6px 16px;border-radius:999px;color:#fff;font-weight:800;letter-spacing:1px;font-size:18px}
+  .tag.t1{background:var(--ebob)} .tag.t2{background:var(--ekok)} .tag.t3{background:var(--asal)}
+  .big{font-size:clamp(34px,8vw,64px);font-weight:900;margin:16px 0 22px}
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .opts.four{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .opt{
+    background:#eef2ff;color:var(--ink);border-radius:16px;padding:18px 10px;font-size:clamp(20px,4vw,30px);font-weight:800;
+    box-shadow:0 5px 0 #c7d2fe;transition:transform .08s
+  }
+  .opt.txt{font-size:clamp(15px,2.4vw,19px);font-weight:700;padding:16px 12px;line-height:1.3}
+  .opt:hover:not(:disabled){transform:translateY(-2px)}
+  .opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 #c7d2fe}
+  .opt.right{background:#dcfce7;box-shadow:0 5px 0 #86efac;color:#14532d}
+  .opt.wrong{background:#fee2e2;box-shadow:0 5px 0 #fca5a5;color:#7f1d1d;animation:shake .35s}
+  .opt.gone{visibility:hidden}
+  .opt:disabled{cursor:default}
+  @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .streak{margin-top:16px;font-weight:800;color:var(--gold);min-height:24px;font-size:18px}
+  .story{font-size:clamp(17px,2.6vw,22px);line-height:1.55;text-align:left;background:#f8fafc;border-radius:16px;padding:18px;border-left:6px solid var(--ebob)}
+  .story .emo{font-size:40px;float:left;margin-right:12px;line-height:1}
+  .ask{font-weight:800;font-size:19px;margin:20px 0 10px;text-align:left}
+  .expl{margin-top:16px;padding:14px 16px;border-radius:14px;font-size:18px;text-align:left;line-height:1.5}
+  .expl.ok{background:#dcfce7;color:#14532d} .expl.no{background:#fee2e2;color:#7f1d1d}
+  .btn{background:var(--ebob);color:#fff;padding:14px 26px;border-radius:14px;font-size:19px;font-weight:800;box-shadow:0 5px 0 rgba(0,0,0,.25);margin-top:16px}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .btn.orange{background:var(--asal)} .btn.green{background:var(--good)} .btn.gray{background:#64748b}
+  .btn:disabled{opacity:.4;cursor:default}
+  #toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-150%);padding:12px 22px;border-radius:14px;color:#fff;font-weight:800;font-size:18px;transition:transform .25s;z-index:50;max-width:92vw;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  #toast.show{transform:translate(-50%,0)}
+  #toast.ok{background:var(--good)} #toast.no{background:var(--bad)}
+
+  /* Bölen merdiveni */
+  .ladder-wrap{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .ladder{display:inline-block;font-size:clamp(22px,4vw,30px);font-weight:800;text-align:center}
+  .lhead{display:grid;grid-template-columns:90px 90px 80px;color:var(--muted);font-size:14px;margin-bottom:4px}
+  .lrow{display:grid;grid-template-columns:90px 90px 80px;align-items:center;border-radius:10px}
+  .lrow span{padding:6px 0}
+  .lrow .p{border-left:4px solid var(--ink);color:var(--ebob)}
+  .lrow.cur span{color:#94a3b8}
+  .lrow.cur .p{color:var(--gold)}
+  .lrow.new{animation:slide .3s}
+  @keyframes slide{from{opacity:0;transform:translateY(-8px)}}
+  .lrow.clickable{cursor:pointer}
+  .lrow.clickable:hover{background:#f1f5f9}
+  .lrow.marked .p{background:#fef3c7}
+  .lrow.marked .p::after{content:" ✔";color:var(--good);font-size:.7em}
+  .lrow.missed .p{background:#fee2e2}
+  .lrow.extra .p{background:#fee2e2;text-decoration:line-through}
+  .primes{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:320px}
+  .prime{width:70px;height:70px;border-radius:50%;font-size:28px;font-weight:900;background:var(--ebob);color:#fff;box-shadow:0 5px 0 #312e81}
+  .prime:active{transform:translateY(3px);box-shadow:0 2px 0 #312e81}
+  .panel{max-width:360px;text-align:left}
+  .panel .ask{margin-top:0}
+  .hint{color:var(--muted);font-size:15px;margin-top:10px}
+  .roundinfo{color:var(--muted);font-weight:700;margin-bottom:8px}
+
+  /* Aralarında asal hızlı karar */
+  .pair{display:flex;justify-content:center;align-items:center;gap:18px;margin:14px 0 24px}
+  .num{width:clamp(100px,22vw,150px);height:clamp(100px,22vw,150px);border-radius:28px;display:flex;align-items:center;justify-content:center;font-size:clamp(40px,9vw,66px);font-weight:900;color:#fff;box-shadow:0 8px 0 rgba(0,0,0,.2)}
+  .num.a{background:var(--asal)} .num.b{background:var(--asal2)}
+  .amp{font-size:32px;font-weight:900;color:var(--muted)}
+  .yn{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .yn button{padding:22px 10px;border-radius:18px;font-size:clamp(18px,3vw,24px);font-weight:900;color:#fff}
+  .yn .yes{background:var(--good);box-shadow:0 6px 0 #14532d}
+  .yn .no{background:var(--bad);box-shadow:0 6px 0 #7f1d1d}
+  .yn button:active{transform:translateY(4px)}
+  .fb{min-height:30px;margin-top:14px;font-size:20px;font-weight:800}
+
+  /* Balon */
+  .targetbar{background:#fff;border-radius:18px;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:12px;font-size:20px}
+  .targetbar b{font-size:40px;color:#fff;background:var(--asal2);padding:2px 18px;border-radius:14px}
+  .targetbar b.flash{animation:pop .5s 2}
+  .targetbar small{font-size:17px;color:var(--muted);width:100%;text-align:center}
+  .sky{position:relative;height:62vh;min-height:380px;border-radius:24px;overflow:hidden;
+    background:linear-gradient(#bae6fd,#e0f2fe 70%,#bbf7d0);box-shadow:inset 0 0 0 4px rgba(255,255,255,.6)}
+  .cloud{position:absolute;background:#fff;border-radius:50px;opacity:.8}
+  .balloon{position:absolute;top:0;width:78px;height:94px;border-radius:50% 50% 48% 48%;display:flex;align-items:center;justify-content:center;
+    font-size:28px;font-weight:900;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.25);cursor:pointer;user-select:none;will-change:transform;
+    box-shadow:inset -8px -10px 0 rgba(0,0,0,.12)}
+  .balloon::before{content:"";position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);border:7px solid transparent;border-bottom-color:inherit;border-top:0}
+  .balloon::after{content:"";position:absolute;top:100%;left:50%;width:2px;height:46px;background:rgba(0,0,0,.3)}
+  .balloon.popped{animation:burst .25s forwards;pointer-events:none}
+  .balloon.bad{animation:shake .35s;filter:grayscale(.6)}
+  @keyframes burst{to{transform:var(--t) scale(1.7);opacity:0}}
+  .sky-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:var(--ink);pointer-events:none;text-align:center;padding:20px}
+
+  /* Soru gezinme çubuğu */
+  .qnav{display:flex;align-items:center;gap:10px;margin-top:16px;background:#fff;border-radius:18px;padding:10px 12px;box-shadow:0 6px 0 rgba(0,0,0,.12)}
+  .navbtn{background:#eef2ff;color:var(--ink);padding:12px 16px;border-radius:12px;font-weight:800;font-size:16px;white-space:nowrap}
+  .navbtn:hover:not(:disabled){background:#e0e7ff}
+  .navbtn:disabled{opacity:.35;cursor:default}
+  .navbtn.fin{background:var(--good);color:#fff}
+  .dots{flex:1;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .dot{width:38px;height:38px;border-radius:10px;background:#e2e8f0;color:#475569;font-weight:800;font-size:15px}
+  .dot.ok{background:#bbf7d0;color:#14532d}
+  .dot.no{background:#fecaca;color:#7f1d1d}
+  .dot.part{background:#fde68a;color:#78350f}
+  .dot.cur{outline:3px solid var(--ink);outline-offset:2px}
+  .navlegend{text-align:center;color:rgba(255,255,255,.85);font-size:13px;margin-top:8px}
+  @media (max-width:520px){ .navbtn{padding:10px;font-size:14px} .dot{width:32px;height:32px} }
+
+  /* Sonuç */
+  .result{text-align:center}
+  .stars{font-size:64px;letter-spacing:8px;margin:10px 0}
+  .stars .off{filter:grayscale(1);opacity:.3}
+  .result .score{font-size:56px;font-weight:900;color:var(--ebob)}
+  .result .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .confetti{position:fixed;top:-20px;width:12px;height:18px;z-index:60;pointer-events:none;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+
+  .howto{text-align:left;font-size:19px;line-height:1.6}
+  .howto li{margin-bottom:6px}
+  .sound{position:fixed;right:14px;bottom:14px;background:#fff;border-radius:50%;width:48px;height:48px;font-size:22px;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:40}
+  @media (max-width:520px){
+    .lhead,.lrow{grid-template-columns:70px 70px 60px}
+    .prime{width:58px;height:58px;font-size:24px}
+    .opts{gap:10px}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<button class="sound" id="soundBtn" title="Ses aç/kapat">🔊</button>
+
+<script>
+/* ================== Yardımcılar ================== */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const gcd = (a,b) => b ? gcd(b, a % b) : a;
+const lcm = (a,b) => a / gcd(a,b) * b;
+const ri = (a,b) => Math.floor(Math.random()*(b-a+1)) + a;
+const pick = arr => arr[ri(0, arr.length-1)];
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=ri(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const isPrime = n => { if (n<2) return false; for (let i=2;i*i<=n;i++) if (n%i===0) return false; return true; };
+
+function makeOpts(correct, cands){
+  const set = new Set([correct]);
+  shuffle(cands.filter(c => Number.isInteger(c) && c > 0 && c !== correct)).forEach(c => { if (set.size < 4) set.add(c); });
+  let k = 1;
+  while (set.size < 4){ const c = correct + (Math.random()<.5?-1:1) * k; if (c > 0) set.add(c); k++; }
+  return shuffle([...set]);
+}
+
+/* ---- oturum / zamanlayıcı yönetimi ---- */
+let session = 0, timers = [];
+function stopAll(){ timers.forEach(t => { clearInterval(t); clearTimeout(t); }); timers = []; session++; }
+function every(fn, ms){ const s = session; timers.push(setInterval(() => { if (s === session) fn(); }, ms)); }
+function later(fn, ms){ const s = session; timers.push(setTimeout(() => { if (s === session) fn(); }, ms)); }
+
+/* ---- ses ---- */
+let soundOn = true, AC;
+function beep(f, d, type='sine', v=.15, delay=0){
+  if (!soundOn) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t = AC.currentTime + delay;
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d);
+  }catch(e){}
+}
+const sGood = () => { beep(660,.12); beep(880,.18,'sine',.15,.09); };
+const sBad  = () => beep(160,.3,'square',.07);
+const sPop  = () => beep(900,.08,'triangle',.2);
+const sWin  = () => [523,659,784,1047].forEach((f,i) => beep(f,.25,'sine',.15,i*.12));
+$('#soundBtn').onclick = () => { soundOn = !soundOn; $('#soundBtn').textContent = soundOn ? '🔊' : '🔇'; };
+
+/* ---- en iyi skorlar ---- */
+function getBest(id){ try{ return +localStorage.getItem('ck_best_'+id) || 0; }catch(e){ return 0; } }
+function setBest(id,v){ try{ localStorage.setItem('ck_best_'+id, v); }catch(e){} }
+
+/* ---- ortak ekran parçaları ---- */
+let G = {};
+function toast(msg, ok){
+  const t = $('#toast'); t.innerHTML = msg; t.className = 'show ' + (ok ? 'ok' : 'no');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.className = '', 1600);
+}
+function gameShell(id, extra){
+  const g = GAMES[id];
+  app.innerHTML = `
+    <div class="hud">
+      <button class="btn-ghost" id="backBtn">← Etkinlikler</button>
+      <div class="title">${g.icon} ${g.name}</div>
+      <div class="stat">⭐ <span id="score">0</span></div>
+      ${extra ? `<div class="stat">${extra}</div>` : ''}
+    </div>
+    <div id="body"></div>`;
+  $('#backBtn').onclick = () => topicMenu(g.topic);
+}
+function addScore(d){
+  G.score = Math.max(0, G.score + d);
+  const s = $('#score'); if (!s) return;
+  s.textContent = G.score;
+  s.parentElement.classList.remove('pop'); void s.parentElement.offsetWidth; s.parentElement.classList.add('pop');
+}
+function renderOpts(el, opts, correct, onDone, cls='opts four', txt=false){
+  el.className = cls;
+  el.innerHTML = opts.map(o => `<button class="opt${txt?' txt':''}" data-v="${String(o).replace(/"/g,'&quot;')}">${o}</button>`).join('');
+  el.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const ok = b.dataset.v === String(correct);
+    el.querySelectorAll('.opt').forEach(x => {
+      x.disabled = true;
+      if (x.dataset.v === String(correct)) x.classList.add('right');
+    });
+    if (!ok) b.classList.add('wrong');
+    ok ? sGood() : sBad();
+    onDone(ok);
+  });
+}
+
+/* ---- durumlu seçenekler (geri dönülünce cevap görünür kalır) ---- */
+function showOpts(el, opts, correct, chosen, onPick, cls='opts four', txt=false, gone=[]){
+  el.className = cls;
+  const done = chosen != null;
+  el.innerHTML = opts.map(o => {
+    let c = 'opt' + (txt ? ' txt' : '');
+    if (done && String(o) === String(correct)) c += ' right';
+    else if (done && String(o) === String(chosen)) c += ' wrong';
+    else if (gone.includes(String(o))) c += ' gone';
+    return `<button class="${c}" data-v="${String(o).replace(/"/g,'&quot;')}" ${done ? 'disabled' : ''}>${o}</button>`;
+  }).join('');
+  if (!done) el.querySelectorAll('.opt:not(.gone)').forEach(b => b.onclick = () => {
+    const ok = b.dataset.v === String(correct);
+    ok ? sGood() : sBad();
+    onPick(b.dataset.v, ok);
+  });
+}
+
+/* ---- soru gezinme çubuğu ---- */
+function navHTML(n, i, status){
+  return `<div class="qnav">
+      <button class="navbtn" id="prevBtn" ${i === 0 ? 'disabled' : ''}>← Önceki</button>
+      <div class="dots">${Array.from({length:n}, (_,j) => `<button class="dot ${status(j)} ${j===i?'cur':''}" data-j="${j}">${j+1}</button>`).join('')}</div>
+      ${i < n-1 ? `<button class="navbtn" id="nextBtn">Sonraki →</button>` : `<button class="navbtn fin" id="finBtn">Bitir ✔</button>`}
+    </div>
+    <div class="navlegend">🟩 doğru · 🟨 yarım / kısmen · 🟥 yanlış · ⬜ cevaplanmadı — klavyedeki ← → tuşlarıyla da geçebilirsiniz</div>`;
+}
+function bindNav(n, i, go, fin){
+  G.nav = { prev: () => { if (i > 0) go(i-1); }, next: () => { if (i < n-1) go(i+1); } };
+  $('#prevBtn').onclick = G.nav.prev;
+  if ($('#nextBtn')) $('#nextBtn').onclick = G.nav.next;
+  if ($('#finBtn')) $('#finBtn').onclick = fin;
+  document.querySelectorAll('.dot').forEach(d => d.onclick = () => go(+d.dataset.j));
+}
+function finishList(id, missingQ, missingSteps){
+  if (missingQ > 0 && !confirm(`${missingQ} soru henüz tamamlanmadı. Etkinliği bitirmek istiyor musunuz?`)) return;
+  G.total += missingSteps;
+  finish(id);
+}
+document.addEventListener('keydown', e => {
+  if (!G.nav || !document.querySelector('.qnav')) return;
+  if (e.key === 'ArrowLeft') G.nav.prev();
+  if (e.key === 'ArrowRight') G.nav.next();
+});
+
+/* ================== Ekranlar ================== */
+const TOPICS = {
+  ebob: {
+    name: 'EBOB – EKOK', icon: '🧮', cls: 't-ebob',
+    desc: 'En büyük ortak bölen ve en küçük ortak kat. Hesapla, tabloyu doldur, problemleri çöz!',
+    tips: [
+      '<b>EBOB:</b> Sayıların hepsini bölen <u>en büyük</u> sayı. Anahtar kelimeler: <i>eşit parçalara ayırma, en büyük kare fayans, en az sayıda paket</i>.',
+      '<b>EKOK:</b> Sayıların hepsinin katı olan <u>en küçük</u> sayı. Anahtar kelimeler: <i>yeniden birlikte, en az kaç gün sonra, en küçük kare oluşturma</i>.',
+      'Bölen tablosunda <b>iki sayıyı birden bölen</b> asalların çarpımı EBOB, <b>tüm</b> asalların çarpımı EKOK\'tur.',
+      '<b>EBOB(a, b) × EKOK(a, b) = a × b</b>'
+    ]
+  },
+  asal: {
+    name: 'Aralarında Asal Sayılar', icon: '🤝', cls: 't-asal',
+    desc: '1\'den başka ortak böleni olmayan sayılar. Hızlı karar ver, balon patlat, dedektif ol!',
+    tips: [
+      '1\'den başka ortak böleni olmayan sayılara <b>aralarında asal</b> sayılar denir. Yani <b>EBOB = 1</b>.',
+      'Aralarında asal sayıların kendilerinin asal olması <u>gerekmez</u>: 8 ile 9 aralarında asaldır.',
+      '<b>Ardışık</b> iki sayma sayısı ve <b>farklı iki asal</b> sayı her zaman aralarında asaldır. <b>1</b> her sayıyla aralarında asaldır.',
+      'Aralarında asal iki sayının <b>EKOK\'u çarpımlarına</b> eşittir.'
+    ]
+  }
+};
+
+const GAMES = {
+  a1: { topic:'ebob', icon:'⚡', name:'Hızlı Hesap', desc:'60 saniyede olabildiğince çok EBOB ve EKOK sorusu çöz. Seri yap, bonus kazan!',
+        how:['Ekranda EBOB ya da EKOK sorusu çıkar.','Doğru cevabı 4 seçenek arasından seç.','Her doğru cevap <b>10 puan</b>; üst üste doğrular seri bonusu kazandırır.','Süre: <b>60 saniye</b>.'], start:()=>startA1() },
+  a2: { topic:'ebob', icon:'🕵️', name:'Problem Avcısı', desc:'Günlük hayat problemlerinde EBOB mu EKOK mu gerektiğini bul, sonra cevabı hesapla.',
+        how:['Problemi dikkatlice oku.','1. adım: Problem <b>EBOB</b> ile mi <b>EKOK</b> ile mi çözülür? (5 puan)','2. adım: Doğru cevabı seç. (10 puan)','Toplam <b>8 problem</b> var.'], start:()=>startA2() },
+  a3: { topic:'ebob', icon:'🪜', name:'Bölen Merdiveni', desc:'Asal çarpan tablosunu adım adım doldur, ortak bölenleri işaretle, EBOB ve EKOK\'u bul.',
+        how:['İki sayıdan en az birini bölen bir <b>asal sayıya</b> tıkla. Tablo kendiliğinden dolar.','Her iki sayı da 1 olunca, <b>ikisini birden bölen</b> asalları tablodan işaretle.','Sonra EBOB\'u ve EKOK\'u seç.','Toplam <b>4 tur</b>.'], start:()=>startA3() },
+  b1: { topic:'asal', icon:'⚖️', name:'Hızlı Karar', desc:'İki sayı gelir: Aralarında asal mı, değil mi? 60 saniyede en çok doğru kararı ver!',
+        how:['Ekranda iki sayı görünür.','Aralarında asal ise <b>✔ ARALARINDA ASAL</b>, değilse <b>✘ DEĞİL</b> butonuna bas.','Her doğru 10 puan, seri yaparsan bonus!','Süre: <b>60 saniye</b>.'], start:()=>startB1() },
+  b2: { topic:'asal', icon:'🎈', name:'Balon Patlat', desc:'Hedef sayıyla aralarında asal olan balonları patlat, diğerlerine dokunma!',
+        how:['Üstte bir <b>hedef sayı</b> yazar.','Hedef sayıyla <b>aralarında asal</b> olan balonlara tıkla: +10 puan.','Yanlış balona tıklarsan 1 can gider (3 canın var).','Hedef sayı her 20 saniyede değişir. Süre: <b>60 saniye</b>.'], start:()=>startB2() },
+  b3: { topic:'asal', icon:'🔎', name:'Asal Dedektif', desc:'Kavram soruları ve bulmacalarla aralarında asal sayıların sırlarını çöz. Joker hakkın var!',
+        how:['<b>10 soru</b> sorulur.','Her doğru cevap 10 puan.','Bir kez <b>%50 jokeri</b> kullanabilirsin: iki yanlış seçenek silinir.','Her sorudan sonra açıklamayı oku!'], start:()=>startB3() },
+};
+
+function home(){
+  stopAll();
+  app.innerHTML = `
+    <div class="hero">
+      <div class="badge">8. Sınıf Matematik · 1. Ünite</div>
+      <h1>Çarpanlar ve Katlar<br>Pekiştirme Etkinlikleri</h1>
+      <p>Bir konu seçin ve pekiştirme etkinliklerini tamamlayın.</p>
+    </div>
+    <div class="topics">
+      ${Object.entries(TOPICS).map(([k,t]) => `
+        <button class="topic ${t.cls}" data-t="${k}">
+          <div class="ico">${t.icon}</div>
+          <h2>${t.name}</h2>
+          <p>${t.desc}</p>
+          <span class="go">3 pekiştirme etkinliği · Başla →</span>
+        </button>`).join('')}
+    </div>`;
+  app.querySelectorAll('.topic').forEach(b => b.onclick = () => topicMenu(b.dataset.t));
+}
+
+function topicMenu(tk){
+  stopAll();
+  const t = TOPICS[tk];
+  const ids = Object.keys(GAMES).filter(id => GAMES[id].topic === tk);
+  app.innerHTML = `
+    <div class="topbar"><button class="btn-ghost" id="homeBtn">← Konular</button></div>
+    <h1 class="page-title">${t.icon} ${t.name}</h1>
+    <div class="tips"><h3>💡 Kısa Hatırlatma</h3><ul>${t.tips.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    <div class="games">
+      ${ids.map((id,i) => { const g = GAMES[id]; const b = getBest(id); return `
+        <button class="gcard" data-id="${id}">
+          <div class="ico">${g.icon}</div>
+          <h3>${i+1}. ${g.name}</h3>
+          <p>${g.desc}</p>
+          <div class="best">${b ? '🏆 En iyi skor: ' + b : 'Henüz tamamlanmadı'}</div>
+        </button>`; }).join('')}
+    </div>`;
+  $('#homeBtn').onclick = home;
+  app.querySelectorAll('.gcard').forEach(b => b.onclick = () => intro(b.dataset.id));
+}
+
+function intro(id){
+  stopAll();
+  const g = GAMES[id];
+  app.innerHTML = `
+    <div class="topbar"><button class="btn-ghost" id="backBtn">← Etkinlikler</button></div>
+    <div class="card">
+      <div style="font-size:70px">${g.icon}</div>
+      <h1 style="margin:4px 0 14px">${g.name}</h1>
+      <ol class="howto">${g.how.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <button class="btn ${g.topic==='asal'?'orange':''}" id="startBtn" style="font-size:24px;padding:16px 40px">▶ Etkinliğe Başla</button>
+    </div>`;
+  $('#backBtn').onclick = () => topicMenu(g.topic);
+  $('#startBtn').onclick = () => { stopAll(); g.start(); };
+}
+
+function finish(id){
+  stopAll();
+  const g = GAMES[id];
+  const acc = G.total ? G.correct / G.total : 0;
+  const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : acc >= .4 ? 1 : 0;
+  const best = getBest(id), isNew = G.score > best;
+  if (isNew) setBest(id, G.score);
+  const msgs = ['Tekrar deneyelim, sen yaparsın! 💪','İyi başlangıç! Biraz daha pratik 👍','Harika iş çıkardın! 🎉','Muhteşem! Tam bir matematik ustası! 🏆'];
+  app.innerHTML = `
+    <div class="card result">
+      <h1 style="margin:0">${g.icon} ${g.name}</h1>
+      <div class="stars">${[1,2,3].map(i => `<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>
+      <div class="score">${G.score} puan</div>
+      <p style="font-size:20px;margin:6px 0">Doğru: <b>${G.correct}</b> / ${G.total} &nbsp;·&nbsp; Başarı: <b>%${Math.round(acc*100)}</b></p>
+      <p style="font-size:18px;color:var(--gold);font-weight:800;min-height:24px">${isNew && G.score>0 ? '🏆 Yeni rekor!' : (best ? 'En iyi skor: ' + best : '')}</p>
+      <p style="font-size:22px;font-weight:700">${msgs[stars]}</p>
+      <div class="row">
+        <button class="btn ${g.topic==='asal'?'orange':''}" id="againBtn">🔁 Tekrar Dene</button>
+        <button class="btn gray" id="menuBtn">📋 Diğer Etkinlikler</button>
+        <button class="btn gray" id="homeBtn">🏠 Ana Sayfa</button>
+      </div>
+    </div>`;
+  $('#againBtn').onclick = () => { stopAll(); g.start(); };
+  $('#menuBtn').onclick = () => topicMenu(g.topic);
+  $('#homeBtn').onclick = home;
+  if (stars >= 2){ sWin(); confetti(); }
+}
+
+function confetti(){
+  const cols = ['#f59e0b','#4f46e5','#db2777','#16a34a','#0891b2','#ea580c'];
+  for (let i=0;i<90;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random()*100 + 'vw';
+    c.style.background = pick(cols);
+    c.style.animationDuration = (2 + Math.random()*2) + 's';
+    c.style.animationDelay = Math.random()*.6 + 's';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
+}
+
+/* ================== EBOB–EKOK 1: Hızlı Hesap ================== */
+function genA1(){
+  let g,a,b;
+  do { g = ri(1,12); a = ri(2,9); b = ri(2,9); } while (a===b || gcd(a,b)!==1 || g*a*b > 300 || g*a > 99 || g*b > 99);
+  const x = g*a, y = g*b, e = g, k = g*a*b;
+  const type = Math.random() < .5 ? 'EBOB' : 'EKOK';
+  const c = type === 'EBOB' ? e : k;
+  const cands = type === 'EBOB'
+    ? [k, e*2, e*3, Math.min(x,y), e+1, e-1, a*b]
+    : [x*y, e, k*2, k/2, x+y, k+e, Math.max(x,y)];
+  return { type, x, y, c, opts: makeOpts(c, cands) };
+}
+function startA1(){
+  G = { id:'a1', score:0, correct:0, total:0, streak:0, time:60 };
+  gameShell('a1', '⏱ <span id="time">60</span>');
+  $('#body').innerHTML = `<div class="card">
+      <span class="tag" id="qtype"></span>
+      <div class="big" id="qtext"></div>
+      <div id="opts"></div>
+      <div class="streak" id="streak"></div>
+    </div>`;
+  every(() => { G.time--; $('#time').textContent = G.time; if (G.time <= 0) finish('a1'); }, 1000);
+  nextA1();
+}
+function nextA1(){
+  const q = genA1();
+  $('#qtype').textContent = q.type;
+  $('#qtype').className = 'tag ' + (q.type === 'EBOB' ? 't1' : 't2');
+  $('#qtext').textContent = `${q.type}(${q.x}, ${q.y}) = ?`;
+  renderOpts($('#opts'), q.opts, q.c, ok => {
+    G.total++;
+    if (ok){
+      G.correct++; G.streak++;
+      const bonus = G.streak >= 3 ? 5 : 0;
+      addScore(10 + bonus);
+      $('#streak').textContent = G.streak >= 3 ? `🔥 ${G.streak} seri! +${bonus} bonus` : '';
+      later(nextA1, 600);
+    } else {
+      G.streak = 0;
+      $('#streak').textContent = `Doğru cevap: ${q.c}`;
+      later(nextA1, 1500);
+    }
+  });
+}
+
+/* ================== EBOB–EKOK 2: Problem Avcısı ================== */
+const A2_EBOB = [
+  (x,y,g,a,b) => ({ icon:'🎀', ans:g, text:`${x} cm ve ${y} cm uzunluğundaki iki kurdele, hiç artmayacak şekilde <b>eşit uzunlukta</b> ve <b>en uzun</b> parçalara kesilecek. Bir parçanın uzunluğu kaç cm olur?`,
+    expl:`Eşit ve en uzun parça → EBOB. EBOB(${x}, ${y}) = <b>${g} cm</b>`, cands:[lcm(x,y), g*2, a*b, Math.min(x,y), g+1] }),
+  (x,y,g,a,b) => ({ icon:'🧱', ans:g, text:`Kenar uzunlukları ${x} cm ve ${y} cm olan dikdörtgen bir zemin, boşluk kalmadan <b>en büyük</b> kare fayanslarla kaplanacak. Bir fayansın kenarı kaç cm olur?`,
+    expl:`En büyük kare fayans → EBOB. EBOB(${x}, ${y}) = <b>${g} cm</b>`, cands:[lcm(x,y), g*2, a*b, g+2, Math.min(x,y)] }),
+  (x,y,g,a,b) => ({ icon:'🍎', ans:a+b, text:`${x} elma ve ${y} armut, her pakette eşit sayıda ve yalnızca tek tür meyve olacak şekilde <b>en az sayıda</b> pakete konulacak. Kaç paket gerekir?`,
+    expl:`En az paket → her pakete en çok meyve → EBOB(${x}, ${y}) = ${g}. Paket sayısı: ${x}÷${g} + ${y}÷${g} = ${a} + ${b} = <b>${a+b}</b>`, cands:[g, a*b, a+b+1, a+b-1, x+y, lcm(x,y)/g] }),
+  (x,y,g,a,b) => ({ icon:'🌳', ans:g, text:`Kenarları ${x} m ve ${y} m olan dikdörtgen bir bahçenin kenarlarına, köşelere de gelecek şekilde <b>eşit aralıklarla</b> ağaç dikilecek. Ağaçlar arası uzaklık <b>en fazla</b> kaç m olabilir?`,
+    expl:`Eşit aralık, en fazla uzaklık → EBOB. EBOB(${x}, ${y}) = <b>${g} m</b>`, cands:[lcm(x,y), g*2, a*b, g+1, x+y] }),
+];
+const A2_EKOK = [
+  (x,y,l) => ({ icon:'🚌', ans:l, text:`Bir duraktan iki otobüs aynı anda kalkıyor. Birinci otobüs ${x} dakikada bir, ikincisi ${y} dakikada bir kalkıyor. <b>En az</b> kaç dakika sonra yeniden <b>birlikte</b> kalkarlar?`,
+    expl:`Yeniden birlikte → EKOK. EKOK(${x}, ${y}) = <b>${l} dakika</b>`, cands:[x*y, gcd(x,y), x+y, l*2, l/2] }),
+  (x,y,l) => ({ icon:'📚', ans:l, text:`Elif kütüphaneye ${x} günde bir, Can ${y} günde bir gidiyor. Bugün ikisi birlikte gittiler. <b>En az</b> kaç gün sonra yine <b>birlikte</b> giderler?`,
+    expl:`Yine birlikte → EKOK. EKOK(${x}, ${y}) = <b>${l} gün</b>`, cands:[x*y, gcd(x,y), x+y, l*2, l+x] }),
+  (x,y,l) => ({ icon:'🟧', ans:l, text:`Kenarları ${x} cm ve ${y} cm olan dikdörtgen kartonlar aynı yönde yan yana ve alt alta dizilerek <b>en küçük</b> kare oluşturulacak. Karenin bir kenarı kaç cm olur?`,
+    expl:`En küçük kare oluşturma → EKOK. EKOK(${x}, ${y}) = <b>${l} cm</b>`, cands:[x*y, gcd(x,y), x+y, l*2, l/2] }),
+  (x,y,l) => ({ icon:'💡', ans:l, text:`İki lamba aynı anda yandı. Birinci lamba ${x} saniyede bir, ikinci lamba ${y} saniyede bir yanıyor. <b>En az</b> kaç saniye sonra tekrar <b>birlikte</b> yanarlar?`,
+    expl:`Tekrar birlikte → EKOK. EKOK(${x}, ${y}) = <b>${l} saniye</b>`, cands:[x*y, gcd(x,y), x+y, l*2, l-x] }),
+  (x,y,l) => ({ icon:'🍬', ans:l, text:`Bir kutudaki şekerler ${x} şekerlik paketlere de ${y} şekerlik paketlere de ayrıldığında hiç şeker artmıyor. Kutuda <b>en az</b> kaç şeker vardır?`,
+    expl:`Her iki sayıya da kalansız bölünen en küçük sayı → EKOK. EKOK(${x}, ${y}) = <b>${l}</b>`, cands:[x*y, gcd(x,y), x+y, l*2, l/2] }),
+];
+function coprimePair(lo, hi){ let a,b; do { a = ri(lo,hi); b = ri(lo,hi); } while (a===b || gcd(a,b)!==1); return [a,b]; }
+function genA2List(){
+  const list = [];
+  shuffle(A2_EBOB).forEach(f => {
+    const g = ri(3,15), [a,b] = coprimePair(2,6);
+    const p = f(g*a, g*b, g, a, b); p.kind = 'EBOB'; list.push(p);
+  });
+  shuffle(A2_EKOK).slice(0,4).forEach(f => {
+    let g,a,b; do { g = ri(2,6); [a,b] = coprimePair(2,7); } while (g*a*b > 240);
+    const p = f(g*a, g*b, g*a*b); p.kind = 'EKOK'; list.push(p);
+  });
+  return shuffle(list).map(p => Object.assign(p, { opts: makeOpts(p.ans, p.cands), k: null, v: null }));
+}
+function a2Status(p){
+  if (p.k == null) return '';
+  const n = (p.k === p.kind) + (p.v != null && String(p.v) === String(p.ans));
+  if (p.v == null) return 'part';
+  return n === 2 ? 'ok' : n === 0 ? 'no' : 'part';
+}
+function startA2(){
+  G = { id:'a2', score:0, correct:0, total:0, i:0, list: genA2List() };
+  gameShell('a2', 'Soru <span id="qi">1</span>/8');
+  showA2();
+}
+function showA2(){
+  const p = G.list[G.i], n = G.list.length;
+  $('#qi').textContent = G.i + 1;
+  $('#body').innerHTML = `<div class="card">
+      <div class="story"><span class="emo">${p.icon}</span>${p.text}</div>
+      <div class="ask">1) Bu problem hangisiyle çözülür?</div>
+      <div id="k"></div>
+      <div id="step2" style="display:${p.k ? '' : 'none'}">
+        <div class="ask">2) Cevap kaçtır?</div>
+        <div id="ans"></div>
+      </div>
+      <div id="expl"></div>
+    </div>
+    ${navHTML(n, G.i, j => a2Status(G.list[j]))}`;
+  showOpts($('#k'), ['EBOB','EKOK'], p.kind, p.k, (v, ok) => {
+    p.k = v; G.total++;
+    if (ok){ G.correct++; addScore(5); toast('Doğru! +5', true); }
+    else toast(`Bu bir ${p.kind} problemi!`, false);
+    showA2();
+  }, 'opts');
+  if (p.k) showOpts($('#ans'), p.opts, p.ans, p.v, (v, ok) => {
+    p.v = v; G.total++;
+    if (ok){ G.correct++; addScore(10); }
+    showA2();
+  });
+  if (p.v != null){
+    const ok = String(p.v) === String(p.ans);
+    $('#expl').innerHTML = `<div class="expl ${ok?'ok':'no'}">${ok?'✅ Doğru!':'❌ Olmadı.'} ${p.expl}</div>`;
+  }
+  bindNav(n, G.i, j => { G.i = j; showA2(); }, () => {
+    const missQ = G.list.filter(q => q.v == null).length;
+    const missS = G.list.reduce((s,q) => s + (q.k == null) + (q.v == null), 0);
+    finishList('a2', missQ, missS);
+  });
+}
+
+/* ================== EBOB–EKOK 3: Bölen Merdiveni ================== */
+function buildNum(){ return 2**ri(0,3) * 3**ri(0,2) * 5**ri(0,1) * (Math.random()<.25 ? 7 : 1); }
+function genA3(){
+  let x,y;
+  do { x = buildNum(); y = buildNum(); } while (x===y || gcd(x,y)===1 || x<12 || y<12 || x>200 || y>200 || lcm(x,y) > 2000);
+  return [x,y];
+}
+function newRoundObj(){
+  const [x,y] = genA3();
+  return { x, y, cur:[x,y], rows:[], phase:'divide', marked:new Set(), wrongRows:null, markOk:null, eChoice:null, kChoice:null, eOpts:null, kOpts:null };
+}
+const commonRows = R => R.rows.map((r,i) => (r.a % r.p === 0 && r.b % r.p === 0) ? i : -1).filter(i => i >= 0);
+function a3Status(R){
+  if (R.kChoice != null){
+    const n = R.markOk + (String(R.eChoice) === String(gcd(R.x,R.y))) + (String(R.kChoice) === String(lcm(R.x,R.y)));
+    return n === 3 ? 'ok' : n === 0 ? 'no' : 'part';
+  }
+  return R.rows.length ? 'part' : '';
+}
+function startA3(){
+  G = { id:'a3', score:0, correct:0, total:0, round:0, rounds:4 };
+  G.rs = Array.from({length:G.rounds}, newRoundObj);
+  gameShell('a3', 'Tur <span id="ri">1</span>/4');
+  drawA3();
+}
+function ladderHTML(R){
+  const done = R.cur[0] === 1 && R.cur[1] === 1;
+  return `<div class="ladder">
+    <div class="lhead"><span>1. sayı</span><span>2. sayı</span><span>asal</span></div>
+    ${R.rows.map((r,i) => {
+      let cls = 'lrow';
+      if (i === R.rows.length-1 && R.phase === 'divide') cls += ' new';
+      if (R.phase === 'mark') cls += ' clickable';
+      if (R.marked.has(i)) cls += ' marked';
+      if (R.wrongRows && R.wrongRows.has(i)) cls += ' missed';
+      return `<div class="${cls}" data-i="${i}"><span>${r.a}</span><span>${r.b}</span><span class="p">${r.p}</span></div>`;
+    }).join('')}
+    <div class="lrow cur"><span>${R.cur[0]}</span><span>${R.cur[1]}</span><span class="p">${done ? '' : '?'}</span></div>
+  </div>`;
+}
+function drawA3(){
+  const R = G.rs[G.round];
+  $('#ri').textContent = G.round + 1;
+  let panel = '';
+  if (R.phase === 'divide'){
+    panel = `<div class="ask">Bir asal sayı seç ve böl:</div>
+      <div class="primes">${[2,3,5,7,11].map(p => `<button class="prime" data-p="${p}">${p}</button>`).join('')}</div>
+      <div class="hint">İpucu: En küçük asal sayıdan başlamak işini kolaylaştırır. Bölünmeyen sayı aynen aşağı iner.</div>`;
+  } else if (R.phase === 'mark'){
+    panel = `<div class="ask">Tablo tamam! 🎉<br>Şimdi <u>iki sayıyı birden</u> bölen asalların satırlarına tıkla.</div>
+      <button class="btn green" id="checkBtn">Kontrol Et ✔</button>
+      <div class="hint">Seçtiğin satırlar sarı olur. Tekrar tıklarsan seçim kalkar.</div>`;
+  } else {
+    panel = `<div id="qa"></div>`;
+  }
+  $('#body').innerHTML = `<div class="card">
+      <div class="roundinfo">EBOB(${R.x}, ${R.y}) ve EKOK(${R.x}, ${R.y}) bulalım</div>
+      <div class="ladder-wrap">${ladderHTML(R)}<div class="panel">${panel}</div></div>
+    </div>
+    ${navHTML(G.rounds, G.round, j => a3Status(G.rs[j]))}`;
+
+  if (R.phase === 'divide'){
+    document.querySelectorAll('.prime').forEach(b => b.onclick = () => {
+      const p = +b.dataset.p;
+      G.total++;
+      if (R.cur[0] % p && R.cur[1] % p){
+        sBad();
+        toast(`${p}, ne ${R.cur[0]} sayısını ne de ${R.cur[1]} sayısını bölüyor!`, false);
+        return;
+      }
+      G.correct++; addScore(2); sPop();
+      R.rows.push({ a:R.cur[0], b:R.cur[1], p });
+      R.cur = R.cur.map(v => v % p === 0 ? v / p : v);
+      if (R.cur[0] === 1 && R.cur[1] === 1) R.phase = 'mark';
+      drawA3();
+    });
+  } else if (R.phase === 'mark'){
+    document.querySelectorAll('.lrow.clickable').forEach(r => r.onclick = () => {
+      const i = +r.dataset.i;
+      R.marked.has(i) ? R.marked.delete(i) : R.marked.add(i);
+      beep(500,.05); drawA3();
+    });
+    $('#checkBtn').onclick = () => {
+      const common = commonRows(R);
+      const ok = common.length === R.marked.size && common.every(i => R.marked.has(i));
+      G.total++;
+      R.markOk = ok;
+      if (ok){ G.correct++; addScore(10); sGood(); toast('Harika! Ortak bölenleri doğru buldun. +10', true); }
+      else {
+        sBad(); toast('Kırmızı satırlarda hata var; doğru işaretler gösterildi.', false);
+        R.wrongRows = new Set(R.rows.map((_,i) => i).filter(i => common.includes(i) !== R.marked.has(i)));
+        R.marked = new Set(common);
+      }
+      const e = gcd(R.x,R.y), k = lcm(R.x,R.y), p0 = R.rows[0].p;
+      R.eOpts = makeOpts(e, [k, e*2, e/2, p0, e*p0]);
+      R.kOpts = makeOpts(k, [R.x*R.y, e, k*2, k/2, k+e]);
+      R.phase = 'done';
+      drawA3();
+    };
+  } else {
+    const e = gcd(R.x,R.y), k = lcm(R.x,R.y);
+    const common = R.rows.filter(r => r.a % r.p === 0 && r.b % r.p === 0).map(r => r.p);
+    const all = R.rows.map(r => r.p);
+    let html = (R.markOk ? '' : `<div class="expl no" style="margin-top:0">Ortak bölen işaretlemesinde hata vardı. Kırmızı satırlara dikkat!</div>`)
+      + `<div class="ask">EBOB(${R.x}, ${R.y}) = ?</div><div id="o1"></div>`;
+    if (R.eChoice != null){
+      html += `<div class="expl ${String(R.eChoice)===String(e)?'ok':'no'}">EBOB = işaretli asalların çarpımı = ${common.join(' · ')} = <b>${e}</b></div>
+        <div class="ask">EKOK(${R.x}, ${R.y}) = ?</div><div id="o2"></div>`;
+    }
+    if (R.kChoice != null){
+      html += `<div class="expl ${String(R.kChoice)===String(k)?'ok':'no'}">EKOK = tüm asalların çarpımı = ${all.join(' · ')} = <b>${k}</b></div>`;
+    }
+    $('#qa').innerHTML = html;
+    showOpts($('#o1'), R.eOpts, e, R.eChoice, (v, ok) => {
+      R.eChoice = v; G.total++; if (ok){ G.correct++; addScore(10); } drawA3();
+    }, 'opts');
+    if (R.eChoice != null) showOpts($('#o2'), R.kOpts, k, R.kChoice, (v, ok) => {
+      R.kChoice = v; G.total++; if (ok){ G.correct++; addScore(10); } drawA3();
+    }, 'opts');
+  }
+  bindNav(G.rounds, G.round, j => { G.round = j; drawA3(); }, () => {
+    const missQ = G.rs.filter(R => R.kChoice == null).length;
+    const missS = G.rs.reduce((s,R) => s + (R.phase !== 'done') + (R.eChoice == null) + (R.kChoice == null), 0);
+    finishList('a3', missQ, missS);
+  });
+}
+/* ================== Aralarında Asal 1: Hızlı Karar ================== */
+function genB1(){
+  const want = Math.random() < .5;
+  let x,y;
+  for(;;){
+    x = ri(2,60); y = ri(2,60);
+    if (x === y) continue;
+    const g = gcd(x,y);
+    if (want && g === 1 && ((!isPrime(x) && !isPrime(y)) || Math.random() < .25)) break;
+    if (!want && g > 1 && ((x % 2 && y % 2) || Math.random() < .35)) break;
+  }
+  return { x, y, cop: gcd(x,y) === 1 };
+}
+function startB1(){
+  G = { id:'b1', score:0, correct:0, total:0, streak:0, time:60, lock:false };
+  gameShell('b1', '⏱ <span id="time">60</span>');
+  $('#body').innerHTML = `<div class="card">
+      <span class="tag t3">Bu iki sayı aralarında asal mı?</span>
+      <div class="pair"><div class="num a" id="na"></div><span class="amp">&</span><div class="num b" id="nb"></div></div>
+      <div class="yn"><button class="yes" id="yes">✔ ARALARINDA ASAL</button><button class="no" id="no">✘ DEĞİL</button></div>
+      <div class="fb" id="fb"></div>
+    </div>`;
+  every(() => { G.time--; $('#time').textContent = G.time; if (G.time <= 0) finish('b1'); }, 1000);
+  $('#yes').onclick = () => answerB1(true);
+  $('#no').onclick = () => answerB1(false);
+  nextB1();
+}
+function nextB1(){
+  G.q = genB1(); G.lock = false;
+  $('#na').textContent = G.q.x; $('#nb').textContent = G.q.y;
+}
+function answerB1(saysCop){
+  if (G.lock) return; G.lock = true;
+  const { x, y, cop } = G.q, g = gcd(x,y), ok = saysCop === cop;
+  G.total++;
+  if (ok){
+    G.correct++; G.streak++;
+    const bonus = G.streak >= 3 ? 5 : 0;
+    addScore(10 + bonus); sGood();
+    $('#fb').innerHTML = `<span style="color:var(--good)">✅ Doğru! EBOB(${x}, ${y}) = ${g}${bonus?` · 🔥 ${G.streak} seri +${bonus}`:''}</span>`;
+    later(nextB1, 700);
+  } else {
+    G.streak = 0; sBad();
+    $('#fb').innerHTML = `<span style="color:var(--bad)">❌ EBOB(${x}, ${y}) = ${g} → ${cop ? 'aralarında asaldır' : `ikisi de ${g}'ye bölünür, aralarında asal değil`}</span>`;
+    later(nextB1, 1800);
+  }
+}
+
+/* ================== Aralarında Asal 2: Balon Patlat ================== */
+const B2_TARGETS = [12,14,15,18,20,21,22,24,26,28,30,33,35,36,42];
+const B2_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+function startB2(){
+  const sid = session;
+  G = { id:'b2', score:0, correct:0, total:0, lives:3, time:60, target:0, balloons:[], speed:70 };
+  gameShell('b2', '❤️ <span id="lives">3</span> &nbsp; ⏱ <span id="time">60</span>');
+  $('#body').innerHTML = `
+    <div class="targetbar">Hedef sayı: <b id="target"></b>
+      <small>Bu sayıyla <u>aralarında asal</u> olan balonları patlat! 🎈</small></div>
+    <div class="sky" id="sky">
+      <div class="cloud" style="width:120px;height:40px;left:8%;top:12%"></div>
+      <div class="cloud" style="width:160px;height:50px;left:62%;top:22%"></div>
+      <div class="cloud" style="width:90px;height:30px;left:40%;top:55%"></div>
+    </div>`;
+  newTargetB2();
+  every(() => {
+    G.time--; $('#time').textContent = G.time;
+    if (G.time <= 0) return finish('b2');
+    if (G.time === 40 || G.time === 20){ G.speed += 20; newTargetB2(); }
+  }, 1000);
+  every(spawnB2, 850);
+  let last = performance.now();
+  function loop(t){
+    if (sid !== session) return;
+    const dt = Math.min(.05, (t - last) / 1000); last = t;
+    G.balloons = G.balloons.filter(b => {
+      if (b.dead) return false;
+      b.y -= b.v * dt;
+      b.el.style.transform = `translateY(${b.y}px)`;
+      if (b.y < -150){ b.el.remove(); return false; }
+      return true;
+    });
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+function newTargetB2(){
+  let t; do { t = pick(B2_TARGETS); } while (t === G.target);
+  G.target = t;
+  const el = $('#target'); el.textContent = t;
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  G.balloons.forEach(b => { b.dead = true; b.el.remove(); });
+  G.balloons = [];
+  const sky = $('#sky');
+  const m = document.createElement('div'); m.className = 'sky-msg'; m.textContent = `Yeni hedef: ${t}`;
+  sky.appendChild(m); setTimeout(() => m.remove(), 1200);
+  beep(440,.15); beep(660,.2,'sine',.15,.15);
+}
+function spawnB2(){
+  const sky = $('#sky'); if (!sky) return;
+  const want = Math.random() < .5;
+  let n; do { n = ri(2,60); } while (n === G.target || (gcd(n, G.target) === 1) !== want);
+  const el = document.createElement('div');
+  el.className = 'balloon';
+  const col = pick(B2_COLORS);
+  el.style.background = col; el.style.borderBottomColor = col; el.style.color = '#fff';
+  el.style.left = ri(2, 86) + '%';
+  el.textContent = n;
+  const H = sky.clientHeight;
+  const b = { el, n, y: H + 10, v: G.speed + ri(0,40), dead:false };
+  el.style.transform = `translateY(${b.y}px)`;
+  el.addEventListener('pointerdown', () => hitB2(b));
+  sky.appendChild(el);
+  G.balloons.push(b);
+}
+function hitB2(b){
+  if (b.dead || b.hit) return;
+  G.total++;
+  const g = gcd(b.n, G.target);
+  if (g === 1){
+    b.hit = true; G.correct++; addScore(10); sPop();
+    b.el.style.setProperty('--t', `translateY(${b.y}px)`);
+    b.el.classList.add('popped'); b.dead = true;
+    setTimeout(() => b.el.remove(), 260);
+  } else {
+    b.hit = true; G.lives--; addScore(-5); sBad();
+    $('#lives').textContent = G.lives;
+    b.el.classList.add('bad');
+    toast(`${b.n} ve ${G.target} → EBOB = ${g}. Aralarında asal değil!`, false);
+    if (G.lives <= 0) later(() => finish('b2'), 400);
+  }
+}
+
+/* ================== Aralarında Asal 3: Asal Dedektif ================== */
+const B3_CONCEPT = [
+  { q:'Ardışık iki doğal sayı (örneğin 14 ve 15) için hangisi <b>her zaman</b> doğrudur?', o:['Aralarında asaldır','İkisi de asaldır','EBOB\'ları 2\'dir','Biri diğerinin katıdır'], e:'Ardışık iki sayının 1\'den başka ortak böleni yoktur, bu yüzden her zaman aralarında asaldır.' },
+  { q:'Aralarında asal iki sayının EBOB\'u kaçtır?', o:['1','0','Sayıların çarpımı','Küçük olan sayı'], e:'Tanım gereği aralarında asal sayıların tek ortak böleni 1\'dir. EBOB = 1.' },
+  { q:'Aralarında asal iki sayının EKOK\'u neye eşittir?', o:['Sayıların çarpımına','1\'e','Sayıların toplamına','Büyük olan sayıya'], e:'EBOB × EKOK = a × b ve EBOB = 1 olduğundan EKOK = a × b olur.' },
+  { q:'Aşağıdakilerden hangisi <b>yanlıştır</b>?', o:['Aralarında asal sayıların ikisi de asal olmak zorundadır','1 her sayma sayısıyla aralarında asaldır','Farklı iki asal sayı aralarında asaldır','Ardışık iki sayma sayısı aralarında asaldır'], e:'8 ve 9 asal değildir ama aralarında asaldır. Yani sayıların asal olması gerekmez.' },
+  { q:'İki <b>çift</b> sayı için hangisi doğrudur?', o:['Aralarında asal olamazlar','Her zaman aralarında asaldırlar','EBOB\'ları her zaman 1\'dir','EKOK\'ları çarpımlarına eşittir'], e:'İki çift sayı da 2\'ye bölünür, EBOB en az 2 olur. Bu yüzden aralarında asal olamazlar.' },
+  { q:'a/b kesri sadeleşemiyorsa (en sade hâlindeyse) a ve b için ne söylenebilir?', o:['Aralarında asaldır','İkisi de asaldır','İkisi de çifttir','a, b\'nin katıdır'], e:'Sadeleşmeyen kesirde pay ve paydanın 1\'den başka ortak böleni yoktur; yani aralarında asaldır.' },
+  { q:'x, 15 ile aralarında asal olan <b>tek basamaklı bir çift</b> sayıdır. x kaç farklı değer alabilir?', o:['3','4','2','1'], e:'Tek basamaklı çift sayılar: 2, 4, 6, 8. EBOB(6, 15) = 3 olduğu için 6 olmaz. x ∈ {2, 4, 8} → 3 değer.' },
+  { q:'EKOK(a, b) = a · b ise a ve b için hangisi <b>kesinlikle</b> doğrudur?', o:['Aralarında asaldır','İkisi de asaldır','a = b\'dir','İkisi de tek sayıdır'], e:'EBOB × EKOK = a × b olduğundan EBOB = 1 olmalı; yani a ve b aralarında asaldır.' },
+  { q:'Hangi sayı <b>her</b> sayma sayısıyla aralarında asaldır?', o:['1','2','11','Hiçbiri'], e:'1\'in tek böleni 1\'dir. Bu yüzden 1 her sayma sayısıyla aralarında asaldır.' },
+  { q:'Farklı iki <b>asal</b> sayı için EBOB kaçtır?', o:['1','Küçük olan asal','Çarpımları','2'], e:'Farklı iki asal sayının ortak böleni sadece 1\'dir, EBOB = 1.' },
+];
+function pairCop(){ let x,y; do { x = ri(4,45); y = ri(4,45); } while (x===y || gcd(x,y)!==1 || (isPrime(x) && isPrime(y))); return [x,y]; }
+function pairNon(){ let x,y; do { x = ri(4,60); y = ri(4,60); } while (x===y || gcd(x,y)===1); return [x,y]; }
+function distinctPairs(first, maker, n){
+  const out = [first], seen = new Set([first.slice().sort((a,b)=>a-b).join()]);
+  while (out.length < n){ const p = maker(); const k = p.slice().sort((a,b)=>a-b).join(); if (!seen.has(k)){ seen.add(k); out.push(p); } }
+  return out;
+}
+const pstr = p => `${p[0]} ve ${p[1]}`;
+const B3_GEN = [
+  () => { const c = pairCop(); const all = distinctPairs(c, pairNon, 4);
+    return { q:'Aşağıdaki sayı ikililerinden hangisi <b>aralarında asaldır</b>?', o:all.map(pstr), a:pstr(c),
+      e:`EBOB(${c[0]}, ${c[1]}) = 1 olduğu için ${pstr(c)} aralarında asaldır. Diğerlerinin 1'den başka ortak böleni var.` }; },
+  () => { const c = pairNon(); const all = distinctPairs(c, pairCop, 4);
+    return { q:'Aşağıdaki sayı ikililerinden hangisi aralarında asal <b>değildir</b>?', o:all.map(pstr), a:pstr(c),
+      e:`EBOB(${c[0]}, ${c[1]}) = ${gcd(c[0],c[1])}. İkisi de ${gcd(c[0],c[1])}'ye bölündüğü için aralarında asal değildir.` }; },
+  () => { const N = pick([12,14,15,18,20,21,22,24,26,28,36]);
+    let m; do { m = ri(4,40); } while (gcd(m,N)!==1 || isPrime(m));
+    const set = new Set([m]); while (set.size < 4){ const k = ri(4,40); if (k!==N && gcd(k,N) > 1) set.add(k); }
+    return { q:`Aşağıdaki sayılardan hangisi <b>${N}</b> ile aralarında asaldır?`, o:[...set].map(String), a:String(m),
+      e:`EBOB(${m}, ${N}) = 1. Diğer seçeneklerin ${N} ile ortak bir böleni var.` }; },
+  () => { const [x,y] = pairCop();
+    const set = new Set([x*y]); [x+y, 1, Math.max(x,y), x*y+x, x*y-y].forEach(v => { if (set.size<4 && v>0) set.add(v); });
+    return { q:`${x} ile ${y} aralarında asal sayılardır. EKOK(${x}, ${y}) kaçtır?`, o:[...set].map(String), a:String(x*y),
+      e:`Aralarında asal sayıların EKOK'u çarpımlarıdır: ${x} × ${y} = ${x*y}.` }; },
+];
+function startB3(){
+  const concept = shuffle(B3_CONCEPT).slice(0,5).map(c => ({ q:c.q, o:c.o, a:c.o[0], e:c.e }));
+  const gen = [0,1,2,3,pick([0,1,2,3])].map(i => B3_GEN[i]());
+  const list = shuffle([...concept, ...gen]).map(q => Object.assign(q, { o: shuffle(q.o), chosen: null, gone: [] }));
+  G = { id:'b3', score:0, correct:0, total:0, i:0, joker:true, list };
+  gameShell('b3', 'Soru <span id="qi">1</span>/10');
+  showB3();
+}
+function showB3(){
+  const q = G.list[G.i], n = G.list.length;
+  $('#qi').textContent = G.i + 1;
+  const canJoker = G.joker && q.chosen == null;
+  $('#body').innerHTML = `<div class="card">
+      <div class="story" style="border-left-color:var(--asal)"><span class="emo">🔎</span>${q.q}</div>
+      <div style="height:16px"></div>
+      <div id="opts"></div>
+      <button class="btn orange" id="jokerBtn" ${canJoker ? '' : 'disabled'}>🃏 %50 Joker ${G.joker ? '' : '(kullanıldı)'}</button>
+      <div id="expl"></div>
+    </div>
+    ${navHTML(n, G.i, j => { const x = G.list[j]; return x.chosen == null ? '' : (x.chosen === x.a ? 'ok' : 'no'); })}`;
+  showOpts($('#opts'), q.o, q.a, q.chosen, (v, ok) => {
+    q.chosen = v; G.total++;
+    if (ok){ G.correct++; addScore(10); }
+    showB3();
+  }, 'opts', true, q.gone);
+  if (q.chosen != null){
+    const ok = q.chosen === q.a;
+    $('#expl').innerHTML = `<div class="expl ${ok?'ok':'no'}">${ok?'✅ Doğru!':'❌ Doğru cevap: <b>'+q.a+'</b>'}<br>${q.e}</div>`;
+  }
+  $('#jokerBtn').onclick = () => {
+    if (!G.joker || q.chosen != null) return;
+    G.joker = false;
+    q.gone = shuffle(q.o.filter(o => o !== q.a)).slice(0,2);
+    beep(700,.1); beep(900,.12,'sine',.15,.1);
+    showB3();
+  };
+  bindNav(n, G.i, j => { G.i = j; showB3(); }, () => {
+    const miss = G.list.filter(x => x.chosen == null).length;
+    finishList('b3', miss, miss);
+  });
+}
+
+home();
+</script>
+</body>
+</html>
