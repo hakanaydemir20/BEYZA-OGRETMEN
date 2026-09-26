@@ -11,4 +11,5 @@
 ## Özellikler
 - İlk açılışta öğrenci adını girer.
 - Her etkinlik sonunda skor tablosu ve sıralama gösterilir; ana sayfada genel skor tablosu vardır.
-- Skorlar cihazın tarayıcısında saklanır (sınıftaki akıllı tahtada tüm öğrenciler aynı tabloda görünür).
+- Skorlar Firebase Firestore üzerinde ortak tabloda toplanır; öğrenciler hangi cihazdan girerse girsin aynı tabloyu görür. İnternet yoksa skor cihazda bekler ve bağlantı gelince gönderilir.
+- Güvenlik kuralları: `firestore.rules`

@@ -269,18 +269,20 @@ const sPop  = () => beep(900,.08,'triangle',.2);
 const sWin  = () => [523,659,784,1047].forEach((f,i) => beep(f,.25,'sine',.15,i*.12));
 $('#soundBtn').onclick = () => { soundOn = !soundOn; $('#soundBtn').textContent = soundOn ? '🔊' : '🔇'; };
 
-/* ---- en iyi skorlar ---- */
-/* ---- öğrenci adı ve skor tablosu (bu cihazın tarayıcısında saklanır) ---- */
+/* ---- öğrenci adı ve ortak skor tablosu (Firebase Firestore) ---- */
 const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const normName = s => s.trim().replace(/\s+/g, ' ');
+const nameKey = s => normName(String(s)).toLocaleLowerCase('tr');
+const isMe = r => player && nameKey(r.name) === nameKey(player);
 let player = store.get('ck_player', null);
-let memScores = null; // localStorage kapalıysa bellekte tut
 
-// Demo kişiler — puan sırası: Hızlı Hesap, Problem Avcısı, Bölen Merdiveni, Hızlı Karar, Balon Patlat, Asal Dedektif
+const FS = 'https://firestore.googleapis.com/v1/projects/beyza-ogretmen/databases/(default)/documents/scores';
+const IDS = ['a1','a2','a3','b1','b2','b3'];
+// Demo kişiler (ortak tabloda da kayıtlı) — yalnızca internet yokken ilk açılışta gösterilir
 const DEMO = [
   ['Zeynep Demir', [245,120,160,290,270,100]],
   ['Ayşe Yılmaz',  [215,115,150,260,240, 90]],
@@ -291,43 +293,88 @@ const DEMO = [
   ['Yusuf Arslan', [120, 70, 96,150,130, 60]],
   ['Ali Öztürk',   [ 95, 55, 84,120,110, 50]],
 ];
-function loadScores(){
-  if (memScores) return memScores;
-  let s = store.get('ck_scores', null);
-  if (!s){
-    const ids = ['a1','a2','a3','b1','b2','b3'];
-    s = DEMO.flatMap(([name, sc]) => sc.map((v,i) => ({ name, id:ids[i], score:v, t:0, demo:true })));
-    store.set('ck_scores', s);
-  }
-  return memScores = s;
+let remote = store.get('ck_cache', null);      // ortak tablonun son kopyası
+let pending = store.get('ck_pending', []);     // henüz gönderilemeyen skorlar
+let online = null, lastSync = 0, syncing = null;
+
+// Her öğrenci + etkinlik için tek kayıt: kimlik = etkinlik + ismin UTF-8 hex kodu
+const docId = (id, n) => id + '_' + [...new TextEncoder().encode(nameKey(n))].map(b => b.toString(16).padStart(2,'0')).join('');
+function fromDoc(d){
+  const f = d.fields || {};
+  return { name:f.name && f.name.stringValue, id:f.id && f.id.stringValue, score:+((f.score && f.score.integerValue) || 0), demo:!!(f.demo && f.demo.booleanValue) };
 }
-function saveScores(s){ memScores = s; store.set('ck_scores', s); }
-function addResult(id, score){ const s = loadScores(); s.push({ name:player, id, score, t:Date.now() }); saveScores(s); }
+async function fetchAll(){
+  const out = []; let tok = '';
+  do {
+    const r = await fetch(FS + '?pageSize=300' + (tok ? '&pageToken=' + encodeURIComponent(tok) : ''));
+    if (!r.ok) throw new Error('okuma ' + r.status);
+    const j = await r.json();
+    (j.documents || []).forEach(d => out.push(fromDoc(d)));
+    tok = j.nextPageToken;
+  } while (tok);
+  return out.filter(r => r.name && IDS.includes(r.id));
+}
+async function sendOne(p){
+  const body = { fields:{ name:{stringValue:p.name}, id:{stringValue:p.id}, score:{integerValue:String(p.score)}, t:{integerValue:String(p.t)} } };
+  const r = await fetch(FS + '/' + docId(p.id, p.name), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.ok || r.status === 403; // 403: tabloda zaten daha yüksek (ya da eşit) puan var
+}
+function syncScores(force){
+  if (syncing) return syncing;
+  if (!force && Date.now() - lastSync < 30000) return Promise.resolve();
+  syncing = (async () => {
+    try{
+      const still = [];
+      for (const p of pending){ try{ if (!(await sendOne(p))) still.push(p); }catch(e){ still.push(p); } }
+      pending = still; store.set('ck_pending', pending);
+      remote = await fetchAll(); store.set('ck_cache', remote);
+      lastSync = Date.now(); online = true;
+    }catch(e){ online = false; }
+    finally{ syncing = null; }
+  })();
+  return syncing;
+}
+function loadScores(){
+  const base = remote || DEMO.flatMap(([name, sc]) => sc.map((v,i) => ({ name, id:IDS[i], score:v, demo:true })));
+  return [...base, ...pending];
+}
+function addResult(id, score){
+  pending.push({ name:player, id, score, t:Date.now() });
+  store.set('ck_pending', pending);
+  return syncScores(true);
+}
+function syncNote(){
+  if (online === false) return pending.length
+    ? `⚠️ İnternet bağlantısı yok. ${pending.length} skor bu cihazda bekliyor, bağlantı gelince ortak tabloya gönderilecek.`
+    : '⚠️ İnternet bağlantısı yok. Tablonun son kaydedilen hâli gösteriliyor.';
+  if (online === true) return '🌐 Ortak skor tablosu: tüm öğrencilerin skorları burada toplanır.';
+  return '⏳ Ortak skor tablosu yükleniyor…';
+}
 function board(id){ // her kişinin o etkinlikteki en iyi skoru
   const best = new Map();
-  loadScores().filter(r => r.id === id).forEach(r => { const b = best.get(r.name); if (!b || r.score > b.score) best.set(r.name, r); });
+  loadScores().filter(r => r.id === id).forEach(r => { const k = nameKey(r.name), b = best.get(k); if (!b || r.score > b.score) best.set(k, r); });
   return [...best.values()].sort((a,b) => b.score - a.score);
 }
 function overallBoard(){ // her etkinlikteki en iyi skorların toplamı
   const m = new Map();
-  Object.keys(GAMES).forEach(id => board(id).forEach(r => {
-    const o = m.get(r.name) || { name:r.name, score:0, n:0 };
-    o.score += r.score; o.n++; m.set(r.name, o);
+  IDS.forEach(id => board(id).forEach(r => {
+    const k = nameKey(r.name), o = m.get(k) || { name:r.name, score:0, n:0 };
+    o.score += r.score; o.n++; m.set(k, o);
   }));
   return [...m.values()].sort((a,b) => b.score - a.score);
 }
-function getBest(id){ const r = board(id).find(r => r.name === player); return r ? r.score : 0; }
+function getBest(id){ const r = board(id).find(isMe); return r ? r.score : 0; }
 const medal = i => ['🥇','🥈','🥉'][i] || (i + 1);
 function boardTable(rows, limit, extraCol){
-  const pi = rows.findIndex(r => r.name === player);
+  const pi = rows.findIndex(isMe);
   const show = rows.slice(0, limit).map((r,i) => [r,i]);
   if (pi >= limit) show.push(null, [rows[pi], pi]);
   if (!rows.length) return `<p class="hint">Henüz skor yok.</p>`;
   return `<table class="lb"><thead><tr><th>Sıra</th><th>Ad Soyad</th>${extraCol ? `<th>${extraCol.h}</th>` : ''}<th>Puan</th></tr></thead><tbody>
     ${show.map(x => x === null ? `<tr class="gap"><td colspan="${extraCol ? 4 : 3}">⋯</td></tr>` : `
-      <tr class="${x[0].name === player ? 'me' : ''}">
+      <tr class="${isMe(x[0]) ? 'me' : ''}">
         <td class="rk">${medal(x[1])}</td>
-        <td>${esc(x[0].name)}${x[0].name === player ? ' <span class="you">sen</span>' : ''}</td>
+        <td>${esc(x[0].name)}${isMe(x[0]) ? ' <span class="you">sen</span>' : ''}</td>
         ${extraCol ? `<td>${extraCol.f(x[0])}</td>` : ''}
         <td class="pt">${x[0].score}</td>
       </tr>`).join('')}
@@ -483,11 +530,12 @@ function nameScreen(){
   inp.focus();
 }
 
-function leaderboard(tab='all', back=home){
+function leaderboard(tab='all', back=home, fresh=false){
   stopAll();
+  const sid = session;
+  if (!fresh) syncScores().then(() => { if (sid === session) leaderboard(tab, back, true); });
   const tabs = [['all','🏆 Genel'], ...Object.entries(GAMES).map(([id,g]) => [id, g.icon + ' ' + g.name])];
   const rows = tab === 'all' ? overallBoard() : board(tab);
-  const hasDemo = loadScores().some(r => r.demo);
   app.innerHTML = `
     <div class="topbar"><button class="btn-ghost" id="backBtn">← Geri</button></div>
     <h1 class="page-title">🏆 Skor Tablosu</h1>
@@ -496,17 +544,9 @@ function leaderboard(tab='all', back=home){
       <p class="hint" style="margin-top:0">${tab === 'all' ? 'Genel sıralama: her etkinlikteki en iyi puanların toplamı.' : 'Her öğrencinin bu etkinlikteki en iyi puanı.'}</p>
       ${boardTable(rows, 50, tab === 'all' ? { h:'Etkinlik', f:r => r.n + '/6' } : null)}
     </div>
-    <div class="lbfoot">
-      Skorlar bu cihazın tarayıcısında saklanır.
-      ${hasDemo ? '<button class="linkbtn" id="clearDemo">Demo kişileri kaldır</button>' : ''}
-    </div>`;
+    <div class="lbfoot">${syncNote()}</div>`;
   $('#backBtn').onclick = back;
-  app.querySelectorAll('.tab').forEach(b => b.onclick = () => leaderboard(b.dataset.k, back));
-  if ($('#clearDemo')) $('#clearDemo').onclick = () => {
-    if (!confirm('8 demo kişi skor tablosundan kaldırılsın mı?')) return;
-    saveScores(loadScores().filter(r => !r.demo));
-    leaderboard(tab, back);
-  };
+  app.querySelectorAll('.tab').forEach(b => b.onclick = () => leaderboard(b.dataset.k, back, true));
 }
 
 function home(){
@@ -578,8 +618,7 @@ function finish(id){
   const acc = G.total ? G.correct / G.total : 0;
   const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : acc >= .4 ? 1 : 0;
   const best = getBest(id), isNew = G.score > best;
-  addResult(id, G.score);
-  const rows = board(id), rank = rows.findIndex(r => r.name === player) + 1;
+  const saving = addResult(id, G.score);
   const msgs = ['Tekrar deneyelim, sen yaparsın! 💪','İyi başlangıç! Biraz daha pratik 👍','Harika iş çıkardın! 🎉','Muhteşem! Tam bir matematik ustası! 🏆'];
   app.innerHTML = `
     <div class="card result">
@@ -589,11 +628,7 @@ function finish(id){
       <p style="font-size:20px;margin:6px 0">Doğru: <b>${G.correct}</b> / ${G.total} &nbsp;·&nbsp; Başarı: <b>%${Math.round(acc*100)}</b></p>
       <p style="font-size:18px;color:var(--gold);font-weight:800;min-height:24px">${isNew && G.score>0 ? '🏆 Yeni rekor!' : (best ? 'En iyi skor: ' + best : '')}</p>
       <p style="font-size:22px;font-weight:700">${esc(player)}, ${msgs[stars].charAt(0).toLocaleLowerCase('tr') + msgs[stars].slice(1)}</p>
-      <div class="lbbox">
-        <h3>🏆 Skor Tablosu · ${g.name}</h3>
-        <p class="rankline">Sıralamadaki yerin: <b>${rank}.</b> / ${rows.length} kişi</p>
-        ${boardTable(rows, 10)}
-      </div>
+      <div class="lbbox" id="lbbox"></div>
       <div class="row">
         <button class="btn ${g.topic==='asal'?'orange':''}" id="againBtn">🔁 Tekrar Dene</button>
         <button class="btn gray" id="lbBtn">🏆 Tüm Tablo</button>
@@ -604,7 +639,21 @@ function finish(id){
   $('#againBtn').onclick = () => { stopAll(); g.start(); };
   $('#menuBtn').onclick = () => topicMenu(g.topic);
   $('#homeBtn').onclick = home;
-  $('#lbBtn').onclick = () => leaderboard(id, () => topicMenu(g.topic));
+  $('#lbBtn').onclick = () => leaderboard(id, () => topicMenu(g.topic), true);
+  const drawBox = (note) => {
+    const rows = board(id), rank = rows.findIndex(isMe) + 1;
+    $('#lbbox').innerHTML = `
+      <h3>🏆 Skor Tablosu · ${g.name}</h3>
+      <p class="rankline">Sıralamadaki yerin: <b>${rank}.</b> / ${rows.length} kişi</p>
+      ${boardTable(rows, 10)}
+      <p class="hint">${note}</p>`;
+  };
+  drawBox('⏳ Skorun ortak tabloya kaydediliyor…');
+  const sid = session;
+  saving.then(() => {
+    if (sid !== session) return;
+    drawBox(online ? '✅ Skorun ortak skor tablosuna kaydedildi.' : syncNote());
+  });
   if (stars >= 2){ sWin(); confetti(); }
 }
 
@@ -1088,6 +1137,7 @@ function showB3(){
   });
 }
 
+syncScores(true); // bekleyen skorları gönder, tabloyu önceden yükle
 home();
 </script>
 </body>
